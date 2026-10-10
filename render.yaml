@@ -1,0 +1,35 @@
+# One-click deploy on Render: New → Blueprint → pick this repo.
+# Runs the web app and the news worker together, with a disk for the database.
+services:
+  - type: web
+    name: code-blue
+    runtime: node
+    plan: starter # persistent disks need a paid plan
+    buildCommand: npm ci && npm run build
+    startCommand: npm run start:all
+    healthCheckPath: /api/health
+    disk:
+      name: codeblue-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: CODEBLUE_DB
+        value: /var/data/codeblue.db
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: CODEBLUE_PASSWORD
+        sync: false
+      - key: CODEBLUE_USER
+        value: admin
+      - key: GUARDIAN_API_KEY
+        sync: false
+      - key: NEWSDATA_API_KEY
+        sync: false
+      - key: CODEBLUE_NEWS_GL
+        value: NG
+      - key: CODEBLUE_NEWS_HL
+        value: en-NG
+      - key: TZ
+        value: Africa/Lagos

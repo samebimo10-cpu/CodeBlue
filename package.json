@@ -10,7 +10,8 @@
     "worker": "tsx scripts/worker.ts",
     "ingest": "tsx scripts/ingest-once.ts",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "start:all": "node scripts/start-all.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.133.0",
@@ -34,5 +35,8 @@
     "tsx": "^4.23.15",
     "typescript": "^5.9.3",
     "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=20"
   }
 }

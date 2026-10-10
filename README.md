@@ -17,9 +17,21 @@ npm run dev                 # app on http://localhost:3000
 npm run worker              # in a second terminal: keeps everything fresh around the clock
 ```
 
-Production: `npm run build && npm start`, plus `npm run worker` kept running (e.g. with pm2, systemd, Railway or Fly.io).
+Production on your own server: `npm run build && npm run start:all`, which runs the app and the worker together.
 
 Requires Node 20+. Data lives in one SQLite file (`data/codeblue.db`).
+
+## Put it online (get your app link)
+
+**Render (one click):**
+1. Sign in at [render.com](https://render.com) with GitHub.
+2. Choose **New → Blueprint** and pick this repo and branch. Render reads `render.yaml`.
+3. When asked, fill in `ANTHROPIC_API_KEY` and **`CODEBLUE_PASSWORD`**. The password protects your app, and your API credit, from strangers. `GUARDIAN_API_KEY` and `NEWSDATA_API_KEY` are optional.
+4. Click **Apply**. Your link appears at the top of the service page, e.g. `https://code-blue.onrender.com`. Log in as `admin` with your password.
+
+The blueprint uses Render's Starter plan, because the news database needs a persistent disk. It runs the web app and the 24/7 news worker together, and it sets Google News to the Nigeria edition and the clock to Lagos time (6am daily coverage). Change `CODEBLUE_NEWS_GL`, `CODEBLUE_NEWS_HL` or `TZ` to switch.
+
+**Railway / Fly.io / any Docker host:** deploy the included `Dockerfile`. Mount a volume at `/var/data` and set the same environment variables.
 
 ## Where the news comes from
 
