@@ -1,0 +1,10 @@
+{
+  "name": "Code Blue",
+  "short_name": "Code Blue",
+  "description": "Daily news coverage, subject briefings and sourced social drafts.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070d1a",
+  "theme_color": "#1352e8",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}
