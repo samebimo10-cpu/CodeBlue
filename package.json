@@ -9,7 +9,6 @@
     "start": "next start",
     "worker": "tsx scripts/worker.ts",
     "ingest": "tsx scripts/ingest-once.ts",
-    "seed": "tsx scripts/seed-demo.ts",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
