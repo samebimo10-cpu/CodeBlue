@@ -1,0 +1,52 @@
+{
+  "name": "inkdesk-pdf",
+  "version": "1.0.0",
+  "private": true,
+  "description": "InkDesk PDF: an offline PDF editor with smart erasers, handwriting styles, image/PDF blending and a receipt & logo designer. Installs on Android and iOS.",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/copy-pdf-assets.mjs",
+    "prebuild": "node scripts/copy-pdf-assets.mjs",
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "cap:sync": "npm run build && cap sync",
+    "android": "npm run build && cap sync android && cap open android",
+    "ios": "npm run build && cap sync ios && cap open ios",
+    "icons": "node scripts/make-icons.mjs",
+    "e2e": "node scripts/e2e.mjs",
+    "make-sample": "node scripts/make-fixture.mjs"
+  },
+  "dependencies": {
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/filesystem": "^8.1.5",
+    "@capacitor/share": "^8.0.3",
+    "@fontsource/caveat": "^5.3.0",
+    "@fontsource/courier-prime": "^5.3.0",
+    "@fontsource/dancing-script": "^5.3.0",
+    "@fontsource/great-vibes": "^5.3.0",
+    "@fontsource/homemade-apple": "^5.3.0",
+    "@fontsource/indie-flower": "^5.3.0",
+    "@fontsource/inter": "^5.3.0",
+    "@fontsource/kalam": "^5.3.0",
+    "@fontsource/merriweather": "^5.3.0",
+    "@fontsource/reenie-beanie": "^5.3.0",
+    "@fontsource/shadows-into-light": "^5.3.0",
+    "fabric": "^6.9.1",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^5.7.284"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.5.3",
+    "@capacitor/cli": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
+    "jsdom": "^29.1.1",
+    "playwright": "^1.56.1",
+    "typescript": "5.9",
+    "vite": "^7.3.7",
+    "vite-plugin-pwa": "^2.0.0",
+    "vitest": "^3.2.7"
+  }
+}

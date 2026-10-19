@@ -7,6 +7,9 @@ Code Blue watches the news around the clock and does two jobs:
 
 Built from the NewsPulse product spec. Product name: Code Blue.
 
+
+> **Also in this repo:** [`pdf-editor/`](pdf-editor/README.md) contains **InkDesk PDF**, a separate offline PDF editor for Android, iOS and desktop. It has smart handwriting/typed erasers, handwriting styles, picture blending, and a receipt & logo designer.
+
 ## Quick start
 
 ```bash

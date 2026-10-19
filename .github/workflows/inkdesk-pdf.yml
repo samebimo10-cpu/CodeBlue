@@ -1,0 +1,54 @@
+name: InkDesk PDF
+
+on:
+  push:
+    paths: ['pdf-editor/**', '.github/workflows/inkdesk-pdf.yml']
+  workflow_dispatch:
+
+defaults:
+  run:
+    working-directory: pdf-editor
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: pdf-editor/package-lock.json }
+      - run: npm ci
+        env: { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' }
+      - run: npm test
+      - run: npm run build
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: pdf-editor/dist }
+
+  # Publishes the installable web app (needed to install on iPhone without a Mac).
+  # Enable once: repo Settings → Pages → Source: GitHub Actions.
+  pages:
+    needs: web
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    permissions: { pages: write, id-token: write }
+    environment: { name: github-pages, url: '${{ steps.deploy.outputs.page_url }}' }
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: pdf-editor/package-lock.json }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: '21' }
+      - run: npm ci
+        env: { PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1' }
+      - run: npm run build && npx cap sync android
+      - run: ./gradlew assembleDebug
+        working-directory: pdf-editor/android
+      - uses: actions/upload-artifact@v4
+        with:
+          name: inkdesk-pdf-android-apk
+          path: pdf-editor/android/app/build/outputs/apk/debug/app-debug.apk

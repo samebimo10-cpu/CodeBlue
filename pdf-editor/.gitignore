@@ -1,0 +1,6 @@
+node_modules
+dist
+dev-dist
+*.log
+public/standard_fonts
+public/cmaps

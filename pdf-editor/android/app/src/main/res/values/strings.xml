@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">InkDesk PDF</string>
+    <string name="title_activity_main">InkDesk PDF</string>
+    <string name="package_name">com.inkdesk.pdf</string>
+    <string name="custom_url_scheme">com.inkdesk.pdf</string>
+</resources>
