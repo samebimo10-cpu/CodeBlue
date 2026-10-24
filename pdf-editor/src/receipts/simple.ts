@@ -406,7 +406,9 @@ export function renderQuick(d: QuickData, logo: HTMLImageElement | null, scale =
     rows = Math.min(30, baseRows + Math.max(0, Math.floor((paper.h - natural - 6 * s) / rowH)));
   }
   const minH = paper.h ?? 0;
-  const H = Math.ceil(draw(ctxFor(probe), d, logo, rows, minH, number));
+  const drawn = draw(ctxFor(probe), d, logo, rows, minH, number);
+  // keep fixed paper exactly its real size (e.g. A5 = 419.53 × 595.28 pt)
+  const H = paper.h && drawn <= paper.h + 0.5 ? paper.h : Math.ceil(drawn);
   const canvas = makeCanvas(W * scale, H * scale);
   const ctx = canvas.getContext('2d')!;
   ctx.scale(scale, scale);
