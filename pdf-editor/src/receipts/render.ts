@@ -151,8 +151,10 @@ function drawPage(p: Pen, d: ReceiptData, logo: HTMLImageElement | null, minH: n
       yy += 10.5 * k;
     }
     // title + meta on the right
-    text(p, d.title, W - M, y + 17 * k, { size: (compact ? 13 : 17) * k, weight: 800, color: accent, align: 'right', spacing: 0.6 });
-    let my = y + 34 * k;
+    // long titles wrap inside the right column instead of running into the business name
+    const ts = (compact ? 13 : 17) * k;
+    const titleEnd = wrap(p, d.title, W - M, y + 17 * k, rightW, ts * 1.15, { size: ts, weight: 800, color: accent, align: 'right' });
+    let my = titleEnd - ts * 1.15 + 17 * k;
     for (const m of d.meta) {
       text(p, m.label, W - M - rightW * 0.52, my, { size: 7.8 * k, color: '#6b7280', align: 'right' });
       text(p, m.value, W - M, my, { size: 8 * k, weight: 600, align: 'right', color: '#111827', max: rightW * 0.5 });

@@ -1,7 +1,7 @@
 import { makeCanvas } from '../lib/util';
 
 export type LogoShape = 'circle' | 'rounded' | 'square' | 'shield' | 'hexagon' | 'none';
-export type LogoIcon = 'cross' | 'pill' | 'flask' | 'heart' | 'staff' | 'mortar' | 'crown' | 'cutlery' | 'bed' | 'star' | 'leaf' | 'none';
+export type LogoIcon = 'cross' | 'pill' | 'flask' | 'heart' | 'staff' | 'mortar' | 'crown' | 'cutlery' | 'bed' | 'star' | 'leaf' | 'plane' | 'car' | 'none';
 
 export interface LogoSpec {
   preset: string;
@@ -36,6 +36,8 @@ export const LOGO_PRESETS: { name: string; spec: Partial<LogoSpec> }[] = [
   { name: 'Hotel crest', spec: { preset: 'hotel', shape: 'shield', bg: '#1f2937', fg: '#d4a24c', icon: 'crown', text: 'H', ring: false, brand: 'Your Hotel & Suites', slogan: 'Comfort • Class', font: 'serif' } },
   { name: 'Hotel stars', spec: { preset: 'hotel2', shape: 'circle', bg: '#9a6b1f', fg: '#ffffff', icon: 'star', text: '', ring: true, brand: 'Your Hotel', slogan: 'Luxury stays', font: 'serif' } },
   { name: 'Guest house', spec: { preset: 'guesthouse', shape: 'rounded', bg: '#334155', fg: '#fbbf24', icon: 'bed', text: '', ring: false, brand: 'Your Guest House', slogan: 'Home away from home' } },
+  { name: 'Airport hotel', spec: { preset: 'airport', shape: 'circle', bg: '#0c4a6e', fg: '#fbbf24', icon: 'plane', text: '', ring: true, brand: 'Your Airport Hotel & Shuttle', slogan: 'Airport taxi • Hotel stays' } },
+  { name: 'Taxi', spec: { preset: 'taxi', shape: 'rounded', bg: '#facc15', fg: '#111827', icon: 'car', text: '', ring: false, brand: 'Your Airport Taxi', slogan: 'Pick-up & drop-off 24/7' } },
   { name: 'Restaurant', spec: { preset: 'restaurant', shape: 'circle', bg: '#b45309', fg: '#ffffff', icon: 'cutlery', text: '', ring: false, brand: 'Your Restaurant', slogan: 'Good food, good mood' } },
   { name: 'Initials', spec: { preset: 'initials', shape: 'circle', bg: '#14213d', fg: '#fca311', icon: 'none', text: 'YB', ring: true, brand: 'Your Business', slogan: 'Since 2024' } },
 ];
@@ -153,6 +155,22 @@ function drawIcon(ctx: CanvasRenderingContext2D, icon: LogoIcon, fg: string, bg:
     case 'leaf':
       fillPath('M84 14C40 14 16 34 16 62c0 10 4 18 10 24 4-20 16-36 36-46-16 14-26 30-28 50 34 4 50-30 50-76z');
       break;
+    case 'plane':
+      ctx.save();
+      ctx.translate(50, 50);
+      ctx.rotate(Math.PI / 4);
+      ctx.translate(-50, -50);
+      fillPath('M50 6c4 0 6 5 6 10v22l34 18v9l-34-9v19l10 8v7l-16-4-16 4v-7l10-8V56l-34 9v-9l34-18V16c0-5 2-10 6-10z');
+      ctx.restore();
+      break;
+    case 'car':
+      fillPath('M24 36c2-6 6-10 13-10h26c7 0 11 4 13 10l5 14h3c4 0 7 3 7 7v13c0 3-2 5-5 5H9c-3 0-5-2-5-5V57c0-4 3-7 7-7h3z');
+      ctx.fillStyle = bg;
+      fillPath('M30 37c1-3 3-4 6-4h28c3 0 5 1 6 4l3 11H27z');
+      ctx.beginPath(); ctx.arc(27, 75, 9, 0, Math.PI * 2); ctx.arc(73, 75, 9, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = fg;
+      ctx.beginPath(); ctx.arc(27, 75, 5, 0, Math.PI * 2); ctx.arc(73, 75, 5, 0, Math.PI * 2); ctx.fill();
+      break;
     case 'none':
       break;
   }
@@ -228,7 +246,7 @@ export function renderLogo(spec: LogoSpec, size = 512): HTMLCanvasElement {
 export const ICONS: [LogoIcon, string][] = [
   ['cross', 'Medical cross'], ['heart', 'Heart pulse'], ['staff', 'Staff & serpent'], ['flask', 'Lab flask'],
   ['pill', 'Capsule'], ['mortar', 'Mortar & pestle'], ['crown', 'Crown'], ['star', 'Stars'],
-  ['bed', 'Bed'], ['cutlery', 'Fork & knife'], ['leaf', 'Leaf'], ['none', 'No icon'],
+  ['bed', 'Bed'], ['plane', 'Aeroplane'], ['car', 'Car / taxi'], ['cutlery', 'Fork & knife'], ['leaf', 'Leaf'], ['none', 'No icon'],
 ];
 export const SHAPES: [LogoShape, string][] = [
   ['circle', 'Circle'], ['rounded', 'Rounded'], ['square', 'Square'], ['shield', 'Shield'], ['hexagon', 'Hexagon'], ['none', 'No badge'],

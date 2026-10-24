@@ -4,7 +4,7 @@ import { defaultLogo, renderLogo, type LogoSpec } from '../logo/logo';
 export interface Template {
   id: string;
   name: string;
-  sector: 'Hospital' | 'Pharmacy' | 'Hotel';
+  sector: 'Hospital' | 'Pharmacy' | 'Hotel' | 'Airport';
   description: string;
   logo: LogoSpec;
   build(): Omit<ReceiptData, 'logo'>;
@@ -231,6 +231,47 @@ export const TEMPLATES: Template[] = [
       notes: '',
       footer: 'Thank you! Please come again.',
       signatures: ['Guest signature'], stamp: '',
+    }),
+  },
+  {
+    id: 'airport-hotel-taxi',
+    name: 'Airport hotel & taxi receipt',
+    sector: 'Airport',
+    description: 'One receipt for airport taxi transfers (MMIA international & local terminals) and the hotel stay.',
+    logo: { ...defaultLogo(), preset: 'airport', shape: 'circle', bg: '#0c4a6e', fg: '#fbbf24', icon: 'plane', text: '', ring: true, layout: 'icon' },
+    build: () => ({
+      template: 'airport-hotel-taxi', layout: 'classic', paper: 'A4', accent: '#0c4a6e', font: 'sans', currency: '₦',
+      title: 'HOTEL & TAXI RECEIPT',
+      business: { name: 'Your Airport Hotel & Shuttle Ltd', tagline: 'Airport taxi • Meet & greet • Hotel stays', address: 'Airport Road, near Murtala Muhammed International Airport, Ikeja, Lagos', phone: '+234 800 777 8888', email: 'bookings@yourairporthotel.example', website: 'www.yourairporthotel.example', regNo: 'RC 000000' },
+      meta: [
+        { label: 'Receipt No.', value: 'AHT-24051' },
+        { label: 'Date', value: today() },
+        { label: 'Booking ref.', value: 'BK-7731' },
+        { label: 'Cashier', value: 'Front Desk' },
+      ],
+      party: { heading: 'Guest & trip', fields: [
+        { label: 'Guest name', value: 'Guest Name' },
+        { label: 'Phone', value: '080 0000 0000' },
+        { label: 'Arrival flight', value: 'XX 123 — International Terminal' },
+        { label: 'Departure flight', value: 'XX 456 — Local Terminal' },
+        { label: 'Room', value: '112 — Executive Double' },
+        { label: 'Driver / Vehicle', value: 'Driver Name • LND-123-XY' },
+      ] },
+      columns: { extra: 'Service', desc: 'Description', qty: 'Qty', price: 'Rate', amount: 'Amount' },
+      showExtra: true,
+      items: [
+        { extra: 'Taxi', desc: 'Airport pick-up: MMIA International Terminal → Hotel', qty: 1, price: 25000 },
+        { extra: 'Airport', desc: 'Meet & greet and porter service, International arrivals', qty: 1, price: 10000 },
+        { extra: 'Hotel', desc: `Room — Executive Double (${daysFrom(-2)} to ${today()})`, qty: 2, price: 55000 },
+        { extra: 'Hotel', desc: 'Breakfast for two', qty: 2, price: 12000 },
+        { extra: 'Taxi', desc: 'Inter-terminal transfer: International Terminal → Local Terminal', qty: 1, price: 8000 },
+        { extra: 'Taxi', desc: 'Airport drop-off: Hotel → MMIA Local (Domestic) Terminal', qty: 1, price: 15000 },
+        { extra: 'Taxi', desc: 'Waiting time (per hour)', qty: 1, price: 3000 },
+      ],
+      discount: 5000, charges: [{ label: 'VAT', rate: 7.5 }], amountPaid: null, paymentMethod: 'POS / Bank transfer',
+      notes: 'Taxi fares cover one vehicle, up to 4 passengers with luggage. Airport parking and toll fees included.',
+      footer: 'Thank you for travelling with us. Safe flight!',
+      signatures: ['Cashier', 'Guest'], stamp: 'PAID',
     }),
   },
 ];
