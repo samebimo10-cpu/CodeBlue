@@ -32,3 +32,20 @@ describe('receipt totals', () => {
     expect(money(-3, '$')).toBe('-$3.00');
   });
 });
+
+import { amountInWords, numberToWords, sheetLayout, QUICK_PAPER } from '../src/receipts/simple';
+
+describe('quick receipt helpers', () => {
+  it('writes amounts in words', () => {
+    expect(numberToWords(204250)).toBe('two hundred and four thousand, two hundred and fifty');
+    expect(numberToWords(1005)).toBe('one thousand and five');
+    expect(numberToWords(1000000)).toBe('one million');
+    expect(amountInWords(135000, '₦')).toBe('One hundred and thirty-five thousand naira only');
+    expect(amountInWords(12.5, '$')).toBe('Twelve dollars, fifty cents only');
+  });
+  it('tiles small receipts onto A4', () => {
+    expect(sheetLayout(QUICK_PAPER.A6.w, QUICK_PAPER.A6.h!).perSheet).toBe(4);
+    expect(sheetLayout(QUICK_PAPER.A5.w, QUICK_PAPER.A5.h!).perSheet).toBe(2);
+    expect(sheetLayout(QUICK_PAPER.A4.w, QUICK_PAPER.A4.h!).perSheet).toBe(1);
+  });
+});

@@ -2,6 +2,7 @@ import { PDFDocument } from 'pdf-lib';
 import { TEMPLATES, instantiate } from './templates';
 import { CURRENCIES, PAPER_PT, computeTotals, money, type KV, type ReceiptData } from './model';
 import { loadLogo, renderReceipt } from './render';
+import { QuickReceipt } from './quick';
 import { ICONS, LOGO_PRESETS, SHAPES, defaultLogo, renderLogo, type LogoSpec } from '../logo/logo';
 import { db } from '../lib/db';
 import { icon } from '../lib/icons';
@@ -44,6 +45,7 @@ export class ReceiptDesigner {
     this.logoPreview = h('div', { class: 'logo-preview checker' });
     this.logoForm = h('div', { class: 'logo-form' });
     this.el.append(
+      new QuickReceipt(this.target, this.goEditor).el,
       h('div', { class: 'card' },
         h('h2', {}, icon('receipt'), 'Receipt designer'),
         h('p', { class: 'muted' }, 'Pick a ready-made template, put in your business details and items — totals, VAT and change are calculated for you.'),
