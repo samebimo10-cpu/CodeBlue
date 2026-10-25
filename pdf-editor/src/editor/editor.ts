@@ -9,6 +9,7 @@ import { eraseCircle, eraseRect, type EraseMode, type Classification } from './c
 import { BLEND_MODES, SERIAL_PROPS, inkKindOf, touches } from './objects';
 import { exportPdf, serializeObjects } from './export';
 import { extractInk, type TakeMode } from './ink';
+import type { ScanOptions as ScanOpts } from './scanlook';
 import { loadPdf, renderPage, type TextBox } from '../lib/pdfjs';
 import { HAND_STYLES, TYPED_FONTS, isHandwritingFamily } from '../handwriting/styles';
 import { icon } from '../lib/icons';
@@ -127,6 +128,7 @@ export class Editor {
       this.btn('pdfimg', 'PDF as picture', () => void this.insertPdfAsImage()),
       this.btn('sign', 'Signature', () => void this.signaturePad()),
       this.btn('library', 'My ink', () => void this.libraryDialog()),
+      this.btn('capture', 'Scan look', () => void this.scanLookDialog()),
       h('span', { class: 'grow' }),
       h('div', { class: 'pager' },
         this.btn('prev', 'Previous page', () => this.goto(this.current - 1), 'icon-only'),
@@ -1451,6 +1453,56 @@ export class Editor {
     } catch (e: any) {
       console.error(e);
       toast('Saving failed: ' + (e?.message ?? e));
+    }
+  }
+
+  /** Save a copy of the document that looks like it came off a scanner. */
+  async scanLookDialog() {
+    if (!this.pages.length) return toast('Open or create a document first');
+    const { defaultScan, applyScanLook, makeScannedPdf } = await import('./scanlook');
+    const saved = await db.get<Partial<ScanOpts>>('settings', 'scan-look').catch(() => undefined);
+    const o: ScanOpts = { ...defaultScan(), ...saved };
+    // preview the current page as it will be saved (edits included)
+    const bytes = await busy('Preparing preview…', () => this.buildPdf());
+    const pdf = await loadPdf(bytes);
+    const pg = await pdf.getPage(this.current + 1);
+    const { canvas: plain } = await renderPage(pg, 1.6);
+    void pdf.destroy();
+    const go = await modal<boolean>('Scan look', (body, close) => {
+      const preview = h('div', { class: 'scan-preview' });
+      const redraw = () => {
+        const c = applyScanLook(plain, { ...o, dpi: 150 }, this.current + 1);
+        c.className = 'scan-canvas';
+        preview.replaceChildren(c);
+        void db.put('settings', 'scan-look', o).catch(() => {});
+      };
+      let timer = 0;
+      const later = () => { clearTimeout(timer); timer = window.setTimeout(redraw, 80); };
+      const slider = (label: string, key: 'tilt' | 'noise' | 'blur' | 'dust' | 'shadow' | 'paper') =>
+        field(label, h('input', { type: 'range', min: '0', max: '1', step: '0.05', value: String(o[key]), oninput: (e: Event) => { o[key] = +(e.target as HTMLInputElement).value; later(); } }));
+      body.append(
+        h('div', { class: 'scan-grid' },
+          preview,
+          h('div', { class: 'scan-controls' },
+            h('p', { class: 'muted small' }, 'Saves a copy of the whole document that looks like a scan. Your edits are kept; the original file is not changed.'),
+            field('Colour', selectEl([['grey', 'Greyscale'], ['bw', 'Black & white'], ['colour', 'Colour']], o.mode, (v) => { o.mode = v as any; later(); })),
+            slider('Tilt', 'tilt'), slider('Grain', 'noise'), slider('Softness', 'blur'), slider('Dust', 'dust'),
+            slider('Edge shadow', 'shadow'), slider('Paper tone', 'paper'),
+            field('Quality', selectEl([['150', '150 dpi (small file)'], ['200', '200 dpi'], ['300', '300 dpi (sharp)']], String(o.dpi), (v) => { o.dpi = +v as any; })),
+            h('button', { class: 'btn small', onclick: () => { o.seed = Math.floor(Math.random() * 1e6); later(); } }, 'Shuffle tilt & dust'),
+            h('div', { class: 'row end' },
+              h('button', { class: 'btn', onclick: () => close(false) }, 'Cancel'),
+              h('button', { class: 'btn primary', onclick: () => close(true) }, 'Save scanned PDF'))),
+        ));
+      redraw();
+    }, { wide: true });
+    if (!go) return;
+    try {
+      const out = await busy('Scanning pages…', () => makeScannedPdf(bytes, o));
+      const name = this.fileName.replace(/(-edited)?\.pdf$/i, '') + '-scanned.pdf';
+      toast(await saveFile(new Blob([out as BlobPart], { type: 'application/pdf' }), name));
+    } catch (e: any) {
+      toast('Could not make the scanned copy: ' + (e?.message ?? e));
     }
   }
 

@@ -283,6 +283,13 @@ input[type='color'] { width: 38px; height: 32px; border: 1px solid var(--line); 
 .icon-pick button canvas { width: 34px; height: 34px; }
 .icon-pick button.on { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 
+/* scan look */
+.scan-grid { display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.scan-preview { background: var(--desk); border-radius: 10px; padding: 10px; display: flex; justify-content: center; max-height: 70vh; overflow: auto; }
+.scan-canvas { max-width: 100%; height: auto; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2); }
+.scan-controls { display: flex; flex-direction: column; gap: 10px; }
+@media (max-width: 720px) { .scan-grid { grid-template-columns: minmax(0, 1fr); } .scan-preview { max-height: 45vh; } }
+
 /* stamp maker */
 .stamp-preview { border-radius: 12px; border: 1px solid var(--line); min-height: 260px; display: flex; align-items: center; justify-content: center; padding: 12px; }
 .stamp-canvas { max-width: 100%; height: auto; max-height: 300px; }
