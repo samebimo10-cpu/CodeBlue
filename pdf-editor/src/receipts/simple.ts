@@ -46,6 +46,8 @@ export interface QuickData {
   items: QuickItem[];
   payment: '' | 'cash' | 'pos' | 'transfer';
   footer: string;
+  /** company stamp picture (made in the stamp maker), printed beside the signatures */
+  stamp: string | null;
 }
 
 export const defaultQuick = (): QuickData => ({
@@ -82,6 +84,7 @@ export const defaultQuick = (): QuickData => ({
   ],
   payment: 'cash',
   footer: 'Thank you. Safe travels!',
+  stamp: null,
 });
 
 export const quickTotal = (d: QuickData) =>
@@ -245,7 +248,7 @@ function tint(hex: string, k: number) {
 }
 
 /** Draws the form and returns its height in points. */
-function draw(x: Ctx, d: QuickData, logo: HTMLImageElement | null, rows: number, minH: number, number?: string): number {
+function draw(x: Ctx, d: QuickData, logo: HTMLImageElement | null, rows: number, minH: number, number?: string, stamp?: HTMLImageElement | null): number {
   const { c, s, W, M } = x;
   const narrow = W < 260;
   const inner = W - 2 * M;
@@ -371,6 +374,19 @@ function draw(x: Ctx, d: QuickData, logo: HTMLImageElement | null, rows: number,
     rule(x, sx, sx + sw, y, INK, 0.7);
     text(x, lbl, sx + sw / 2, y + 10 * s, 7.5, { color: '#4b5563', align: 'center' });
   };
+  if (stamp) {
+    // slightly tilted, like a hand stamp
+    const sh = (narrow ? 62 : 78) * s;
+    const sw = (stamp.width / stamp.height) * sh;
+    const cx = W - M - sw / 2 - (narrow ? 4 : 16) * s; // clear space right of the tick boxes
+    c.save();
+    c.globalAlpha = 0.9;
+    c.globalCompositeOperation = 'multiply';
+    c.translate(cx, y - sh * 0.2);
+    c.rotate(-0.12);
+    c.drawImage(stamp, -sw / 2, -sh / 2, sw, sh);
+    c.restore();
+  }
   if (narrow) {
     sig('Cashier signature', M, inner); y += 30 * s;
     sig('Customer signature', M, inner); y += 14 * s;
@@ -390,7 +406,7 @@ function draw(x: Ctx, d: QuickData, logo: HTMLImageElement | null, rows: number,
 }
 
 /** Renders one receipt. `number` overrides the receipt number (for numbered books). */
-export function renderQuick(d: QuickData, logo: HTMLImageElement | null, scale = 2, number?: string) {
+export function renderQuick(d: QuickData, logo: HTMLImageElement | null, scale = 2, number?: string, stamp?: HTMLImageElement | null) {
   const paper = QUICK_PAPER[d.paper];
   const W = paper.w;
   const s = Math.max(0.5, Math.min(1.3, W / 420));
@@ -402,17 +418,17 @@ export function renderQuick(d: QuickData, logo: HTMLImageElement | null, scale =
   let rows = baseRows;
   if (paper.h) {
     // grow the table so the form fills the page instead of leaving a gap
-    const natural = draw(ctxFor(probe), d, logo, baseRows, 0, number);
+    const natural = draw(ctxFor(probe), d, logo, baseRows, 0, number, stamp);
     rows = Math.min(30, baseRows + Math.max(0, Math.floor((paper.h - natural - 6 * s) / rowH)));
   }
   const minH = paper.h ?? 0;
-  const drawn = draw(ctxFor(probe), d, logo, rows, minH, number);
+  const drawn = draw(ctxFor(probe), d, logo, rows, minH, number, stamp);
   // keep fixed paper exactly its real size (e.g. A5 = 419.53 × 595.28 pt)
   const H = paper.h && drawn <= paper.h + 0.5 ? paper.h : Math.ceil(drawn);
   const canvas = makeCanvas(W * scale, H * scale);
   const ctx = canvas.getContext('2d')!;
   ctx.scale(scale, scale);
-  draw(ctxFor(ctx), d, logo, rows, minH, number);
+  draw(ctxFor(ctx), d, logo, rows, minH, number, stamp);
   return { canvas, widthPt: W, heightPt: H };
 }
 

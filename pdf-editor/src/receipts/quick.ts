@@ -43,10 +43,18 @@ export class QuickReceipt {
     this.refresh();
   }
 
+  /** Put a stamp (from the stamp maker) on the receipt. */
+  setStamp(url: string | null) {
+    this.d.stamp = url;
+    this.renderForm();
+    this.refresh();
+    this.el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
   private refresh() {
     clearTimeout(this.timer);
     this.timer = window.setTimeout(async () => {
-      const { canvas, widthPt, heightPt } = renderQuick(this.d, await loadLogo(this.d.logo), Math.min(2.5, (window.devicePixelRatio || 1) * 1.4), this.numbers(1)[0]);
+      const { canvas, widthPt, heightPt } = renderQuick(this.d, await loadLogo(this.d.logo), Math.min(2.5, (window.devicePixelRatio || 1) * 1.4), this.numbers(1)[0], await loadLogo(this.d.stamp));
       canvas.className = 'receipt-canvas' + (this.d.paper.startsWith('thermal') ? ' thermal' : '');
       this.preview.replaceChildren(canvas);
       const sl = sheetLayout(widthPt, heightPt);
@@ -165,6 +173,10 @@ export class QuickReceipt {
           h('button', { class: 'btn small', onclick: () => set(() => (d.logo = renderLogo({ ...defaultLogo(), ...LOGO_PRESETS.find((p) => p.spec.preset === 'airport')?.spec, layout: 'icon' }, 300).toDataURL('image/png')), true) }, 'Plane logo'),
           h('button', { class: 'btn small', onclick: () => set(() => (d.logo = renderLogo({ ...defaultLogo(), ...LOGO_PRESETS.find((p) => p.spec.preset === 'taxi')?.spec, layout: 'icon' }, 300).toDataURL('image/png')), true) }, 'Taxi logo'),
           d.logo ? h('button', { class: 'btn small', onclick: () => set(() => (d.logo = null), true) }, 'No logo') : null),
+        h('div', { class: 'row wrap' },
+          d.stamp ? h('img', { src: d.stamp, class: 'logo-thumb', alt: 'Stamp' }) : h('span', { class: 'muted small' }, 'No stamp'),
+          h('button', { class: 'btn small', onclick: () => document.querySelector('.stamp-maker')?.scrollIntoView({ behavior: 'smooth' }) }, d.stamp ? 'Change stamp' : 'Make a stamp'),
+          d.stamp ? h('button', { class: 'btn small', onclick: () => set(() => (d.stamp = null), true) }, 'Remove stamp') : null),
         h('div', { class: 'two' },
           field('Title', input(d.title, (v) => (d.title = v))),
           field('Currency', selectEl(CURRENCIES.map((c) => [c, c.trim()]), d.currency, (v) => set(() => (d.currency = v), true)))),
@@ -196,7 +208,8 @@ export class QuickReceipt {
       const pdf = await PDFDocument.create();
       pdf.setTitle(d.blank ? 'Blank receipts' : `${d.title} ${d.receiptNo}`);
       pdf.setCreator('InkDesk PDF');
-      const first = renderQuick(d, logo, 3);
+      const stamp = await loadLogo(d.stamp);
+      const first = renderQuick(d, logo, 3, undefined, stamp);
       const { widthPt: w, heightPt: hh } = first;
       const sheet = this.sheet === 'sheet' ? sheetLayout(w, hh) : null;
       const perPage = sheet && sheet.perSheet > 0 ? sheet.perSheet : 1;
@@ -206,7 +219,7 @@ export class QuickReceipt {
       const embed = async (c: HTMLCanvasElement) => pdf.embedPng(new Uint8Array(await (await canvasToBlob(c)).arrayBuffer()));
       // identical copies share one image; numbered copies each get their own
       const shared = numbered ? null : await embed(first.canvas);
-      const imageFor = async (num?: string) => shared ?? embed(renderQuick(d, logo, 3, num).canvas);
+      const imageFor = async (num?: string) => shared ?? embed(renderQuick(d, logo, 3, num, stamp).canvas);
       let k = 0;
       for (let p = 0; p < pages; p++) {
         if (!sheet || sheet.perSheet <= 1) {
@@ -231,7 +244,7 @@ export class QuickReceipt {
   }
 
   private async exportPng() {
-    const { canvas } = renderQuick(this.d, await loadLogo(this.d.logo), 4, this.numbers(1)[0]);
+    const { canvas } = renderQuick(this.d, await loadLogo(this.d.logo), 4, this.numbers(1)[0], await loadLogo(this.d.stamp));
     toast(await saveFile(await canvasToBlob(canvas), this.fileName('png')));
   }
 
@@ -244,7 +257,7 @@ export class QuickReceipt {
   }
 
   private async toEditor() {
-    const { canvas, widthPt, heightPt } = renderQuick(this.d, await loadLogo(this.d.logo), 4, this.numbers(1)[0]);
+    const { canvas, widthPt, heightPt } = renderQuick(this.d, await loadLogo(this.d.logo), 4, this.numbers(1)[0], await loadLogo(this.d.stamp));
     await this.target.addImagePage(canvas.toDataURL('image/png'), widthPt, heightPt);
     this.goEditor();
     toast(this.d.blank ? 'Blank receipt added — use Add text or Pen to fill it in' : 'Receipt added as a new page');

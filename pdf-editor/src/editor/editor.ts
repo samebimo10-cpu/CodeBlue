@@ -917,7 +917,7 @@ export class Editor {
     img.set({
       left: vis.x - (img.width * sc) / 2, top: vis.y - (img.height * sc) / 2,
       data: { kind, ...meta },
-      globalCompositeOperation: kind === 'handwriting' || kind === 'signature' ? 'multiply' : 'source-over',
+      globalCompositeOperation: kind === 'handwriting' || kind === 'signature' || kind === 'stamp' ? 'multiply' : 'source-over',
     } as any);
     this.setTool('select');
     this.addObject(v.fc, img);

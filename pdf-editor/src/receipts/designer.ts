@@ -3,6 +3,7 @@ import { TEMPLATES, instantiate } from './templates';
 import { CURRENCIES, PAPER_PT, computeTotals, money, type KV, type ReceiptData } from './model';
 import { loadLogo, renderReceipt } from './render';
 import { QuickReceipt } from './quick';
+import { StampMaker } from '../stamp/panel';
 import { ICONS, LOGO_PRESETS, SHAPES, defaultLogo, renderLogo, type LogoSpec } from '../logo/logo';
 import { db } from '../lib/db';
 import { icon } from '../lib/icons';
@@ -44,8 +45,14 @@ export class ReceiptDesigner {
     this.preview = h('div', { class: 'rpreview' });
     this.logoPreview = h('div', { class: 'logo-preview checker' });
     this.logoForm = h('div', { class: 'logo-form' });
+    const quick = new QuickReceipt(this.target, this.goEditor);
+    const stamps = new StampMaker(
+      (url) => { quick.setStamp(url); toast('Stamp added to the quick receipt'); },
+      async (url) => { this.goEditor(); await this.target.placeImage(url, 'stamp', {}, 0.22); },
+    );
     this.el.append(
-      new QuickReceipt(this.target, this.goEditor).el,
+      quick.el,
+      stamps.el,
       h('div', { class: 'card' },
         h('h2', {}, icon('receipt'), 'Receipt designer'),
         h('p', { class: 'muted' }, 'Pick a ready-made template, put in your business details and items — totals, VAT and change are calculated for you.'),
