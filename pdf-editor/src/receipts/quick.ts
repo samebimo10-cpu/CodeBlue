@@ -1,5 +1,5 @@
 import { PDFDocument, degrees, rgb } from 'pdf-lib';
-import { QUICK_PAPER, defaultQuick, quickTotal, renderQuick, sheetLayout, type QuickData } from './simple';
+import { QUICK_PAPER, defaultQuick, quickTotal, renderQuick, sheetLayout, type QuickData, type StampBox } from './simple';
 import { CURRENCIES, money } from './model';
 import { loadLogo } from './render';
 import { LOGO_PRESETS, defaultLogo, renderLogo } from '../logo/logo';
@@ -28,7 +28,7 @@ export class QuickReceipt {
       h('div', { class: 'card' },
         h('h2', {}, icon('receipt'), 'Quick receipt — airport hotel & taxi'),
         h('p', { class: 'muted' }, 'A simple receipt form. Print it blank and fill it in by pen, or type the details and save a finished PDF. Pick any size from a till roll to A4.')),
-      h('div', { class: 'rworkspace' }, this.form, h('div', { class: 'rpreview-wrap' }, this.preview, this.info)));
+      h('div', { class: 'rworkspace' }, this.form, h('div', { class: 'rpreview-wrap' }, this.preview, this.stampTools, this.info)));
     void this.init();
   }
 
@@ -46,6 +46,7 @@ export class QuickReceipt {
   /** Put a stamp (from the stamp maker) on the receipt. */
   setStamp(url: string | null) {
     this.d.stamp = url;
+    this.d.stampPos = null;
     this.renderForm();
     this.refresh();
     this.el.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -54,15 +55,74 @@ export class QuickReceipt {
   private refresh() {
     clearTimeout(this.timer);
     this.timer = window.setTimeout(async () => {
-      const { canvas, widthPt, heightPt } = renderQuick(this.d, await loadLogo(this.d.logo), Math.min(2.5, (window.devicePixelRatio || 1) * 1.4), this.numbers(1)[0], await loadLogo(this.d.stamp));
-      canvas.className = 'receipt-canvas' + (this.d.paper.startsWith('thermal') ? ' thermal' : '');
-      this.preview.replaceChildren(canvas);
+      const { canvas, widthPt, heightPt, stampBox } = renderQuick(this.d, await loadLogo(this.d.logo), Math.min(2.5, (window.devicePixelRatio || 1) * 1.4), this.numbers(1)[0], await loadLogo(this.d.stamp), true);
+      canvas.className = 'receipt-canvas';
+      const sheet = h('div', { class: 'qsheet' + (this.d.paper.startsWith('thermal') ? ' thermal' : '') }, canvas);
+      if (this.d.stamp && stampBox) sheet.append(this.stampOverlay(widthPt, heightPt, stampBox));
+      this.preview.replaceChildren(sheet);
+      this.stampControls(widthPt, heightPt, stampBox);
       const sl = sheetLayout(widthPt, heightPt);
       const mm = (pt: number) => Math.round((pt / 72) * 25.4);
       this.info.textContent = `${mm(widthPt)} × ${mm(heightPt)} mm` +
         (sl.perSheet > 1 ? ` · ${sl.perSheet} fit on one A4 sheet` : '');
       void db.put('settings', 'quick-receipt', this.d).catch(() => {});
     }, 100);
+  }
+
+  private stampTools = h('div', { class: 'stamp-tools' });
+
+  /** The stamp drawn on top of the preview, so it can be dragged anywhere on the receipt. */
+  private stampOverlay(W: number, H: number, box: StampBox) {
+    const img = h('img', { src: this.d.stamp!, class: 'qstamp', alt: 'Stamp — drag to move', draggable: false, title: 'Drag to move the stamp' });
+    const place = (b: StampBox) => Object.assign(img.style, {
+      left: (b.cx / W) * 100 + '%', top: (b.cy / H) * 100 + '%', width: (b.w / W) * 100 + '%',
+      transform: `translate(-50%, -50%) rotate(${b.angle}deg)`,
+    });
+    place(box);
+    let start: { px: number; py: number; cx: number; cy: number } | null = null;
+    img.addEventListener('pointerdown', (e) => {
+      e.preventDefault();
+      img.setPointerCapture(e.pointerId);
+      const pos = this.d.stampPos ?? { x: box.cx / W, y: box.cy / H, size: box.h, angle: box.angle };
+      this.d.stampPos = pos;
+      start = { px: e.clientX, py: e.clientY, cx: pos.x, cy: pos.y };
+      img.classList.add('dragging');
+    });
+    img.addEventListener('pointermove', (e) => {
+      if (!start || !this.d.stampPos) return;
+      const r = img.parentElement!.getBoundingClientRect();
+      const pos = this.d.stampPos;
+      pos.x = Math.max(0, Math.min(1, start.cx + (e.clientX - start.px) / r.width));
+      pos.y = Math.max(0, Math.min(1, start.cy + (e.clientY - start.py) / r.height));
+      place({ ...box, cx: pos.x * W, cy: pos.y * H });
+    });
+    const end = () => {
+      if (!start) return;
+      start = null;
+      img.classList.remove('dragging');
+      void db.put('settings', 'quick-receipt', this.d).catch(() => {});
+    };
+    img.addEventListener('pointerup', end);
+    img.addEventListener('pointercancel', end);
+    return img;
+  }
+
+  /** Size and tilt controls under the preview while a stamp is on the receipt. */
+  private stampControls(W: number, H: number, box: StampBox | null) {
+    const t = this.stampTools;
+    if (!this.d.stamp || !box) { t.replaceChildren(); delete t.dataset.key; return; }
+    // rebuild only when the paper or stamp changes, so a slider isn't replaced mid-drag
+    const key = `${W}|${this.d.stamp.length}|${this.d.stampPos ? 1 : 0}`;
+    if (t.dataset.key === key) return;
+    t.dataset.key = key;
+    const fix = () => (this.d.stampPos ??= { x: box.cx / W, y: box.cy / H, size: box.h, angle: box.angle });
+    const slider = (label: string, min: number, max: number, value: number, on: (v: number) => void) =>
+      field(label, h('input', { type: 'range', min: String(min), max: String(max), step: '1', value: String(Math.round(value)), oninput: (e: Event) => { on(+(e.target as HTMLInputElement).value); this.refresh(); } }));
+    t.replaceChildren(
+      h('span', { class: 'muted small' }, 'Drag the stamp to move it.'),
+      slider('Stamp size', 30, Math.round(Math.min(240, W * 0.6)), box.h, (v) => (fix().size = v)),
+      slider('Tilt', -45, 45, box.angle, (v) => (fix().angle = v)),
+      h('button', { class: 'btn small', onclick: () => { this.d.stampPos = null; this.refresh(); } }, 'Reset stamp'));
   }
 
   private renderForm() {

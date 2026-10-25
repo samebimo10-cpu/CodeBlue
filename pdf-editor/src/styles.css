@@ -290,6 +290,14 @@ input[type='color'] { width: 38px; height: 32px; border: 1px solid var(--line); 
 .preset canvas { max-width: 70px; height: auto; }
 
 /* quick receipt */
+.qsheet { position: relative; width: 100%; max-width: 640px; line-height: 0; }
+.qsheet.thermal { max-width: 320px; }
+.qsheet .receipt-canvas { max-width: 100%; width: 100%; }
+.qstamp { position: absolute; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; mix-blend-mode: multiply; opacity: 0.9; }
+.qstamp:hover, .qstamp.dragging { outline: 2px dashed var(--accent); outline-offset: 2px; }
+.qstamp.dragging { cursor: grabbing; }
+.stamp-tools { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px 16px; margin-top: 10px; }
+.stamp-tools .field { flex-direction: row; align-items: center; gap: 6px; }
 .quick { display: flex; flex-direction: column; gap: 16px; }
 .seg.big button { padding: 10px 16px; font-weight: 600; }
 .qtop { border-color: var(--accent); }
@@ -336,6 +344,8 @@ input[type='color'] { width: 38px; height: 32px; border: 1px solid var(--line); 
   body.printing-quick .qpreview, body.printing-quick .qpreview * { visibility: visible !important; }
   body.printing-quick .qpreview { position: fixed; left: 0; top: 0; width: 100%; max-height: none; padding: 0; background: #fff; overflow: visible; }
   body.printing-quick .receipt-canvas { box-shadow: none; max-width: 100%; }
+  body.printing-quick .qsheet { max-width: 100%; }
+  body.printing-quick .qstamp { outline: none; }
   body.printing-receipt * { visibility: hidden !important; }
   body.printing-receipt .rpreview:not(.qpreview), body.printing-receipt .rpreview:not(.qpreview) * { visibility: visible !important; }
   body.printing-receipt .rpreview:not(.qpreview) { position: fixed; left: 0; top: 0; width: 100%; max-height: none; padding: 0; background: #fff; overflow: visible; }

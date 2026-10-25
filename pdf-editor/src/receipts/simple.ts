@@ -48,6 +48,25 @@ export interface QuickData {
   footer: string;
   /** company stamp picture (made in the stamp maker), printed beside the signatures */
   stamp: string | null;
+  /** where the stamp sits once the user has moved it: centre as a fraction of the
+   *  receipt's width/height, height in points, tilt in degrees */
+  stampPos: StampPos | null;
+}
+
+export interface StampPos {
+  x: number;
+  y: number;
+  size: number;
+  angle: number;
+}
+
+/** The stamp's box on the receipt, in points. */
+export interface StampBox {
+  cx: number;
+  cy: number;
+  w: number;
+  h: number;
+  angle: number;
 }
 
 export const defaultQuick = (): QuickData => ({
@@ -85,6 +104,7 @@ export const defaultQuick = (): QuickData => ({
   payment: 'cash',
   footer: 'Thank you. Safe travels!',
   stamp: null,
+  stampPos: null,
 });
 
 export const quickTotal = (d: QuickData) =>
@@ -158,6 +178,8 @@ interface Ctx {
   W: number;
   M: number;
   accent: string;
+  /** set while drawing: where the stamp goes */
+  stampBox?: StampBox;
 }
 
 function font(x: Ctx, size: number, weight = 400) {
@@ -248,7 +270,10 @@ function tint(hex: string, k: number) {
 }
 
 /** Draws the form and returns its height in points. */
-function draw(x: Ctx, d: QuickData, logo: HTMLImageElement | null, rows: number, minH: number, number?: string, stamp?: HTMLImageElement | null): number {
+function draw(
+  x: Ctx, d: QuickData, logo: HTMLImageElement | null, rows: number, minH: number, number?: string,
+  stamp?: HTMLImageElement | null, pageH = 0, hideStamp = false,
+): number {
   const { c, s, W, M } = x;
   const narrow = W < 260;
   const inner = W - 2 * M;
@@ -375,17 +400,23 @@ function draw(x: Ctx, d: QuickData, logo: HTMLImageElement | null, rows: number,
     text(x, lbl, sx + sw / 2, y + 10 * s, 7.5, { color: '#4b5563', align: 'center' });
   };
   if (stamp) {
-    // slightly tilted, like a hand stamp
-    const sh = (narrow ? 62 : 78) * s;
+    // default spot: clear space right of the tick boxes, slightly tilted like a hand stamp
+    const pos = d.stampPos;
+    const sh = pos?.size ?? (narrow ? 62 : 78) * s;
     const sw = (stamp.width / stamp.height) * sh;
-    const cx = W - M - sw / 2 - (narrow ? 4 : 16) * s; // clear space right of the tick boxes
-    c.save();
-    c.globalAlpha = 0.9;
-    c.globalCompositeOperation = 'multiply';
-    c.translate(cx, y - sh * 0.2);
-    c.rotate(-0.12);
-    c.drawImage(stamp, -sw / 2, -sh / 2, sw, sh);
-    c.restore();
+    const box: StampBox = pos && pageH
+      ? { cx: pos.x * W, cy: pos.y * pageH, w: sw, h: sh, angle: pos.angle }
+      : { cx: W - M - sw / 2 - (narrow ? 4 : 16) * s, cy: y - sh * 0.2, w: sw, h: sh, angle: pos?.angle ?? -7 };
+    x.stampBox = box;
+    if (!hideStamp) {
+      c.save();
+      c.globalAlpha = 0.9;
+      c.globalCompositeOperation = 'multiply';
+      c.translate(box.cx, box.cy);
+      c.rotate((box.angle * Math.PI) / 180);
+      c.drawImage(stamp, -sw / 2, -sh / 2, sw, sh);
+      c.restore();
+    }
   }
   if (narrow) {
     sig('Cashier signature', M, inner); y += 30 * s;
@@ -405,8 +436,12 @@ function draw(x: Ctx, d: QuickData, logo: HTMLImageElement | null, rows: number,
   return Math.max(y + M * 0.6, minH);
 }
 
-/** Renders one receipt. `number` overrides the receipt number (for numbered books). */
-export function renderQuick(d: QuickData, logo: HTMLImageElement | null, scale = 2, number?: string, stamp?: HTMLImageElement | null) {
+/**
+ * Renders one receipt. `number` overrides the receipt number (for numbered books).
+ * `hideStamp` leaves the stamp off the picture (the preview shows a draggable one instead);
+ * its box is still returned.
+ */
+export function renderQuick(d: QuickData, logo: HTMLImageElement | null, scale = 2, number?: string, stamp?: HTMLImageElement | null, hideStamp = false) {
   const paper = QUICK_PAPER[d.paper];
   const W = paper.w;
   const s = Math.max(0.5, Math.min(1.3, W / 420));
@@ -428,8 +463,9 @@ export function renderQuick(d: QuickData, logo: HTMLImageElement | null, scale =
   const canvas = makeCanvas(W * scale, H * scale);
   const ctx = canvas.getContext('2d')!;
   ctx.scale(scale, scale);
-  draw(ctxFor(ctx), d, logo, rows, minH, number, stamp);
-  return { canvas, widthPt: W, heightPt: H };
+  const fx = ctxFor(ctx);
+  draw(fx, d, logo, rows, minH, number, stamp, H, hideStamp);
+  return { canvas, widthPt: W, heightPt: H, stampBox: fx.stampBox ?? null };
 }
 
 /** How copies of a w×h receipt tile onto an A4 sheet (picks portrait or landscape). */
