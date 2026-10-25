@@ -520,6 +520,7 @@ export class Editor {
     fc.on('selection:created', () => this.renderProps());
     fc.on('selection:updated', () => this.renderProps());
     fc.on('selection:cleared', () => this.renderProps());
+    fc.on('object:added', (e: any) => { if (e.target?.data?.kind === 'stamp' && !fc.getActiveObject()) this.renderProps(); });
 
     fc.on('mouse:down', (e: TPointerEventInfo) => {
       if (this.gesture.active) return;
@@ -1164,6 +1165,9 @@ export class Editor {
         break;
       default:
         p.append(h('span', { class: 'hint' }, 'Tap an item to move, resize or style it. Use the tools above to write, draw, erase or add pictures.'));
+        if (this.addedStamps().length) {
+          p.append(h('button', { class: 'btn small', onclick: () => this.removeAddedStamps() }, icon('trash', 14), 'Remove my stamps'));
+        }
     }
   }
 
@@ -1454,6 +1458,38 @@ export class Editor {
       console.error(e);
       toast('Saving failed: ' + (e?.message ?? e));
     }
+  }
+
+  /** Stamps placed with the stamp maker, on every page that has been opened. */
+  private addedStamps() {
+    const found: { fc: Canvas; o: FabricObject }[] = [];
+    for (const p of this.pages) {
+      const v = this.views.get(p.id);
+      if (!v) continue;
+      for (const o of v.fc.getObjects()) if ((o as any).data?.kind === 'stamp') found.push({ fc: v.fc, o });
+    }
+    return found;
+  }
+
+  /** Remove every stamp you added, in one undoable step. */
+  removeAddedStamps() {
+    const found = this.addedStamps();
+    if (!found.length) return toast('No added stamps to remove');
+    const byCanvas = new Map<Canvas, FabricObject[]>();
+    for (const { fc, o } of found) (byCanvas.get(fc) ?? byCanvas.set(fc, []).get(fc)!).push(o);
+    const saved = [...byCanvas].map(([fc, objs]) => ({ fc, objs, at: objs.map((o) => fc.getObjects().indexOf(o)) }));
+    const remove = () => { for (const { fc, objs } of saved) { fc.discardActiveObject(); fc.remove(...objs); fc.requestRenderAll(); } this.renderProps(); };
+    remove();
+    this.dirty = true;
+    this.history.push({
+      label: 'Remove stamps',
+      undo: () => {
+        for (const { fc, objs, at } of saved) { objs.forEach((o, i) => fc.insertAt(Math.max(0, at[i]), o)); fc.requestRenderAll(); }
+        this.renderProps();
+      },
+      redo: remove,
+    });
+    toast(`Removed ${found.length} stamp${found.length === 1 ? '' : 's'} — tap Undo to bring ${found.length === 1 ? 'it' : 'them'} back`);
   }
 
   /** Save a copy of the document that looks like it came off a scanner. */
