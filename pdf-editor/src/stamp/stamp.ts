@@ -1,5 +1,5 @@
 // Company stamp drawing: a round seal with text around the ring, or a rectangular office stamp.
-import { makeCanvas } from '../lib/util';
+import { makeCanvas, mulberry32 } from '../lib/util';
 
 export interface StampSpec {
   shape: 'round' | 'rect';
@@ -15,7 +15,15 @@ export interface StampSpec {
   dateLine: boolean;
   date: string;
   color: string;
+  /** how worn / unevenly inked the impression looks: 0 = crisp, 1 = heavily faded */
+  fade: number;
+  /** picks the fade pattern, so every stamping can look a little different */
+  seed: number;
 }
+
+export const FADE_LEVELS: [number, string][] = [
+  [0, 'Crisp (no fade)'], [0.3, 'Light'], [0.55, 'Medium'], [0.8, 'Heavy'], [1, 'Very worn'],
+];
 
 export const defaultStamp = (): StampSpec => ({
   shape: 'round',
@@ -26,6 +34,8 @@ export const defaultStamp = (): StampSpec => ({
   dateLine: true,
   date: '',
   color: '#1d3fa8',
+  fade: 0.3,
+  seed: 1,
 });
 
 export const STAMP_INKS: [string, string][] = [
@@ -149,5 +159,57 @@ export function renderStamp(s: StampSpec, size = 600): HTMLCanvasElement {
     c.beginPath(); c.moveTo(m * 4, size * 0.4); c.lineTo(W - m * 4, size * 0.4); c.stroke();
     middle(c, s, W / 2, size * 0.67, inner * 0.8, size * 0.78);
   }
+  if (s.fade > 0) applyFade(cv, s.fade, s.seed, size);
   return cv;
+}
+
+/** Integer hash → 0..1, so a pattern looks the same at every render size. */
+function hash(x: number, y: number, seed: number) {
+  let h = (x * 374761393 + y * 668265263 + seed * 2246822519) | 0;
+  h = Math.imul(h ^ (h >>> 13), 1274126177);
+  return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
+}
+
+/** Smooth value noise on a grid of `cells` across the stamp height. */
+function valueNoise(u: number, v: number, cells: number, seed: number) {
+  const x = u * cells, y = v * cells;
+  const x0 = Math.floor(x), y0 = Math.floor(y);
+  const fx = x - x0, fy = y - y0;
+  const sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const a = hash(x0, y0, seed), b = hash(x0 + 1, y0, seed), c = hash(x0, y0 + 1, seed), d = hash(x0 + 1, y0 + 1, seed);
+  return (a * (1 - sx) + b * sx) * (1 - sy) + (c * (1 - sx) + d * sx) * sy;
+}
+
+/**
+ * Makes the ink uneven like a real rubber-stamp impression: one side pressed lighter,
+ * blotchy patches where the pad was dry, and fine gaps where the paper grain didn't
+ * take ink. The pattern depends only on the seed and position, not on the pixel size.
+ */
+function applyFade(cv: HTMLCanvasElement, fade: number, seed: number, size: number) {
+  const ctx = cv.getContext('2d')!;
+  const img = ctx.getImageData(0, 0, cv.width, cv.height);
+  const d = img.data;
+  const rand = mulberry32(seed * 7919 + 13);
+  const dir = rand() * Math.PI * 2; // which side gets less pressure
+  const dx = Math.cos(dir), dy = Math.sin(dir);
+  const W = cv.width, H = cv.height;
+  for (let y = 0; y < H; y++) {
+    const v = y / size;
+    for (let x = 0; x < W; x++) {
+      const i = (y * W + x) * 4 + 3;
+      if (!d[i]) continue;
+      const u = x / size;
+      // uneven pressure across the stamp
+      const side = ((u - W / size / 2) * dx + (v - H / size / 2) * dy) / (Math.max(W, H) / size);
+      let k = 1 - fade * 0.55 * Math.max(0, side + 0.5);
+      // dry patches
+      const blot = valueNoise(u, v, 6, seed) * 0.6 + valueNoise(u, v, 14, seed + 1) * 0.4;
+      k *= 1 - fade * 0.75 * Math.max(0, blot - 0.35) / 0.65;
+      // paper grain: tiny unlinked specks
+      const grain = hash(Math.floor(u * 260), Math.floor(v * 260), seed + 2);
+      if (grain < fade * 0.35) k *= grain / (fade * 0.35) * 0.5;
+      d[i] = Math.max(0, Math.min(255, d[i] * k));
+    }
+  }
+  ctx.putImageData(img, 0, 0);
 }

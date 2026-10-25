@@ -1,4 +1,4 @@
-import { STAMP_INKS, defaultStamp, renderStamp, type StampSpec } from './stamp';
+import { FADE_LEVELS, STAMP_INKS, defaultStamp, renderStamp, type StampSpec } from './stamp';
 import { db } from '../lib/db';
 import { icon } from '../lib/icons';
 import { saveFile } from '../lib/save';
@@ -54,6 +54,9 @@ export class StampMaker {
       h('div', { class: 'two' },
         field('Shape', selectEl([['round', 'Round seal'], ['rect', 'Rectangle']], s.shape, (v) => upd(() => (s.shape = v as any)))),
         field('Ink', inks)),
+      h('div', { class: 'row wrap' },
+        field('Ink fade', selectEl(FADE_LEVELS.map(([v, l]) => [String(v), l]), String(s.fade), (v) => upd(() => (s.fade = +v)))),
+        h('button', { class: 'btn small', title: 'Same fade level, different pattern', onclick: () => upd(() => (s.seed = Math.floor(Math.random() * 1e6))) }, 'New fade pattern')),
       input('Company name', 'top', 'e.g. YOUR COMPANY LIMITED'),
       input(s.shape === 'round' ? 'Bottom of ring (RC number, city)' : 'Second line (address, RC number)', 'bottom', 'e.g. RC 000000 • LAGOS'),
       h('div', { class: 'two' },
@@ -90,7 +93,7 @@ export class StampMaker {
     }
     for (const st of all) {
       this.savedBox.append(h('div', { class: 'preset' },
-        h('button', { class: 'plain', title: st.spec.top, onclick: () => { this.s = { ...st.spec }; this.renderForm(); this.draw(); } }, renderStamp(st.spec, 88)),
+        h('button', { class: 'plain', title: st.spec.top, onclick: () => { this.s = { ...defaultStamp(), ...st.spec, fade: st.spec.fade ?? 0 }; this.renderForm(); this.draw(); } }, renderStamp(st.spec, 88)),
         h('button', { class: 'icon-btn', 'aria-label': 'Delete stamp', onclick: async () => {
           await db.put('settings', 'stamps', all.filter((x) => x.id !== st.id));
           void this.renderSaved();
